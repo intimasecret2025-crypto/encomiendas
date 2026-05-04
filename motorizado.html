@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Encomiendas — Motorizado</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛵</text></svg>" />
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    const firebaseConfig = {
+      apiKey: "AIzaSyD2-fUo2-pTNgk-4Z7l1aTCE0sx9AT0D00",
+      authDomain: "encomiendas-intima-secret.firebaseapp.com",
+      databaseURL: "https://encomiendas-intima-secret-default-rtdb.firebaseio.com",
+      projectId: "encomiendas-intima-secret",
+      storageBucket: "encomiendas-intima-secret.firebasestorage.app",
+      messagingSenderId: "277297159054",
+      appId: "1:277297159054:web:d854968656ceca2c4222df"
+    };
+    try {
+      const app = initializeApp(firebaseConfig);
+      const db = getDatabase(app);
+      window.__firebase = { db, ref, onValue, update };
+    } catch(e) { window.__firebase = null; }
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0b0f1a; --surface: #131829; --surface2: #1a2236;
+      --border: #1f2d4a; --accent: #00d4ff;
+      --green: #00e5a0; --red: #ff4d6d; --yellow: #ffd166; --orange: #ff6b35;
+      --text: #e2e8f8; --muted: #5a6a8a;
+      --font: 'Syne', sans-serif; --mono: 'DM Mono', monospace;
+    }
+    html, body, #root { min-height: 100%; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #0d1526, #121e38);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-icon { font-size: 26px; }
+    .header-title { font-size: 18px; font-weight: 800; }
+    .header-sub { font-size: 11px; color: var(--muted); margin-top: 1px; font-family: var(--mono); }
+    .sync-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 6px 14px; font-size: 12px; font-weight: 600;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot.green { background: var(--green); animation: pulse 2s infinite; }
+    .dot.red { background: var(--red); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* Contador */
+    .counter-bar {
+      background: linear-gradient(135deg, rgba(0,229,160,.12), rgba(0,212,255,.06));
+      border-bottom: 1px solid rgba(0,229,160,.2);
+      padding: 12px 20px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    }
+    .counter-text { font-size: 13px; color: var(--muted); }
+    .counter-num { font-size: 22px; font-weight: 800; color: var(--green); font-family: var(--mono); }
+
+    /* Grid de cards */
+    .main { padding: 16px; max-width: 700px; margin: 0 auto; }
+    .grid { display: flex; flex-direction: column; gap: 12px; }
+
+    /* Card de paquete */
+    .pkg-card {
+      background: var(--surface);
+      border: 1.5px solid rgba(0,229,160,.3);
+      border-radius: 16px; padding: 18px;
+      animation: fadeIn .3s ease;
+    }
+    .pkg-card.entregado {
+      border-color: var(--border);
+      opacity: .6;
+    }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+    .pkg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .pkg-num { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .badge-pending { background: rgba(0,229,160,.15); color: var(--green); }
+    .badge-done { background: rgba(255,107,53,.15); color: var(--orange); }
+
+    .pkg-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .pkg-row { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; }
+    .pkg-icon { font-size: 16px; min-width: 22px; text-align: center; margin-top: 1px; }
+    .pkg-label { color: var(--muted); min-width: 90px; font-size: 12px; }
+    .pkg-val { color: var(--text); font-weight: 600; flex: 1; word-break: break-word; }
+
+    /* Fotos */
+    .fotos-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .foto-thumb { width: 64px; height: 64px; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); cursor: pointer; }
+    .foto-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* Botón salida */
+    .btn-salida {
+      width: 100%; padding: 14px; border-radius: 12px;
+      background: var(--green); color: #000;
+      font-family: var(--font); font-weight: 800; font-size: 15px;
+      border: none; cursor: pointer; transition: all .18s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-salida:active { transform: scale(.97); background: #00c48a; }
+    .btn-salida:disabled { opacity: .5; cursor: not-allowed; }
+    .entregado-label {
+      width: 100%; padding: 12px; border-radius: 12px;
+      background: rgba(255,107,53,.1); color: var(--orange);
+      font-weight: 700; font-size: 14px; text-align: center;
+      border: 1px solid rgba(255,107,53,.2);
+    }
+
+    /* Loading / empty */
+    .center { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 24px; gap: 16px; color: var(--muted); text-align: center; }
+    .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-icon { font-size: 56px; }
+    .empty-title { font-size: 18px; font-weight: 700; color: var(--text); }
+    .empty-sub { font-size: 13px; }
+
+    /* Vista imagen */
+    .img-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.92); display: flex; align-items: center; justify-content: center; z-index: 200; cursor: pointer; padding: 16px; }
+    .img-overlay img { max-width: 100%; max-height: 90vh; border-radius: 12px; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--green); color: #000; padding: 12px 24px; border-radius: 12px; font-weight: 800; font-size: 14px; z-index: 300; animation: fadeIn .3s ease; white-space: nowrap; }
+
+    /* Filtro */
+    .filtro-row { display: flex; gap: 8px; padding: 12px 16px; }
+    .filtro-btn { flex: 1; padding: 9px; border-radius: 9px; font-family: var(--font); font-weight: 700; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--muted); transition: all .18s; }
+    .filtro-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const fmtDate = (d) => d ? new Date(d + "T00:00:00").toLocaleDateString("es-CR") : "—";
+const nowDT = () => {
+  const d = new Date();
+  return { date: d.toISOString().split("T")[0], time: d.toTimeString().slice(0,5) };
+};
+
+function App() {
+  const [packages, setPackages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [online, setOnline] = useState(false);
+  const [imgView, setImgView] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [saving, setSaving] = useState(null);
+  const [filtro, setFiltro] = useState("pendientes"); // "pendientes" | "todos"
+
+  useEffect(() => {
+    const tryFb = () => {
+      const fb = window.__firebase;
+      if (!fb) { setTimeout(tryFb, 300); return; }
+      const unsub = fb.onValue(fb.ref(fb.db, "encomiendas"), (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const list = Object.entries(data).map(([key, val]) => ({ ...val, _key: key }));
+          list.sort((a, b) => (b.id || 0) - (a.id || 0));
+          // Solo mostrar envíos a domicilio, nunca retiros en tienda
+          setPackages(list.filter(p => {
+          const envio = (p.envio||"").toLowerCase().trim()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+          return (p.estado === "ingresado" || p.estado === "salida")
+            && p.tipoEntrega !== "retiro"
+            && envio !== "el angel";
+        }));
+        } else { setPackages([]); }
+        setOnline(true);
+        setLoading(false);
+      }, () => { setOnline(false); setLoading(false); });
+      return unsub;
+    };
+    const cleanup = tryFb();
+    return () => { if (typeof cleanup === "function") cleanup(); };
+  }, []);
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
+
+  const marcarSalida = async (pkg) => {
+    const fb = window.__firebase;
+    if (!fb || !pkg._key) return;
+    setSaving(pkg._key);
+    const t = nowDT();
+    try {
+      await fb.update(fb.ref(fb.db, `encomiendas/${pkg._key}`), {
+        estado: "salida", fechaSalida: t.date, horaSalida: t.time
+      });
+      showToast("✅ Salida registrada");
+    } catch(e) { showToast("❌ Error al registrar"); }
+    setSaving(null);
+  };
+
+  const pendientes = packages.filter(p => p.estado !== "salida"); // ya filtrado sin retiros
+  const mostrar = filtro === "pendientes" ? pendientes : packages;
+
+  return (
+    <div>
+      {/* Header */}
+      <div className="header">
+        <div className="header-left">
+          <div className="header-icon">🛵</div>
+          <div>
+            <div className="header-title">Motorizado</div>
+            <div className="header-sub">ENCOMIENDAS INTIMA SECRET</div>
+          </div>
+        </div>
+        <div className={`sync-pill`}>
+          <div className={`dot ${online ? "green" : "red"}`} />
+          <span style={{ color: online ? "var(--green)" : "var(--red)" }}>
+            {online ? "En línea" : "Sin conexión"}
+          </span>
+        </div>
+      </div>
+
+      {/* Contador */}
+      <div className="counter-bar">
+        <div className="counter-text">Paquetes pendientes de entrega</div>
+        <div className="counter-num">{pendientes.length}</div>
+      </div>
+
+      {/* Filtro */}
+      <div className="filtro-row">
+        <button className={`filtro-btn ${filtro === "pendientes" ? "active" : ""}`} onClick={() => setFiltro("pendientes")}>
+          📦 Solo pendientes ({pendientes.length})
+        </button>
+        <button className={`filtro-btn ${filtro === "todos" ? "active" : ""}`} onClick={() => setFiltro("todos")}>
+          📋 Ver todos ({packages.length})
+        </button>
+      </div>
+
+      {/* Contenido */}
+      <div className="main">
+        {loading ? (
+          <div className="center">
+            <div className="spinner" />
+            <div>Conectando con la base de datos...</div>
+          </div>
+        ) : mostrar.length === 0 ? (
+          <div className="center">
+            <div className="empty-icon">🎉</div>
+            <div className="empty-title">¡Todo entregado!</div>
+            <div className="empty-sub">No hay paquetes pendientes por el momento</div>
+          </div>
+        ) : (
+          <div className="grid">
+            {mostrar.map((p, i) => (
+              <div key={p._key} className={`pkg-card ${p.estado === "salida" ? "entregado" : ""}`}>
+                {/* Header de la card */}
+                <div className="pkg-header">
+                  <span className={`badge ${p.estado === "salida" ? "badge-done" : "badge-pending"}`}>
+                    {p.estado === "salida" ? "✅ Entregado" : "📦 Pendiente"}
+                  </span>
+                  <span className="pkg-num">#{packages.indexOf(p) + 1} · {p.numeroFactura || "Sin factura"}</span>
+                </div>
+
+                {/* Datos */}
+                <div className="pkg-rows">
+                  <div className="pkg-row">
+                    <span className="pkg-icon">👤</span>
+                    <span className="pkg-label">Depositante</span>
+                    <span className="pkg-val">{p.nombreDepositante || "—"}</span>
+                  </div>
+                  <div className="pkg-row">
+                    <span className="pkg-icon">📱</span>
+                    <span className="pkg-label">No. Cliente</span>
+                    <span className="pkg-val">{p.numeroCliente || "—"}</span>
+                  </div>
+                  {p.numeroPaga && (
+                    <div className="pkg-row">
+                      <span className="pkg-icon">💳</span>
+                      <span className="pkg-label">Paga a</span>
+                      <span className="pkg-val">{p.numeroPaga}</span>
+                    </div>
+                  )}
+                  <div className="pkg-row">
+                    <span className="pkg-icon">📅</span>
+                    <span className="pkg-label">Ingreso</span>
+                    <span className="pkg-val">{fmtDate(p.fechaIngreso)} {p.horaIngreso && `· ${p.horaIngreso}`}</span>
+                  </div>
+                  {p.envio && (
+                    <div className="pkg-row">
+                      <span className="pkg-icon">📦</span>
+                      <span className="pkg-label">Envío</span>
+                      <span className="pkg-val">{p.envio}</span>
+                    </div>
+                  )}
+                  {p.sello && (
+                    <div className="pkg-row">
+                      <span className="pkg-icon">🔖</span>
+                      <span className="pkg-label">Sello</span>
+                      <span className="pkg-val">{p.sello}</span>
+                    </div>
+                  )}
+                  <div className="pkg-row">
+                    <span className="pkg-icon">{p.tipoVenta === "tienda" ? "🏪" : "👩"}</span>
+                    <span className="pkg-label">{p.tipoVenta === "tienda" ? "Tienda" : "Asesora"}</span>
+                    <span className="pkg-val">{p.tipoVenta === "tienda" ? (p.tienda || "—") : (p.nombreAsesora || "—")}</span>
+                  </div>
+                  {p.estado === "salida" && p.horaSalida && (
+                    <div className="pkg-row">
+                      <span className="pkg-icon">🕐</span>
+                      <span className="pkg-label">Salida</span>
+                      <span className="pkg-val" style={{color:"var(--orange)"}}>{fmtDate(p.fechaSalida)} · {p.horaSalida}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Fotos */}
+                {p.imagenes && p.imagenes.length > 0 && (
+                  <div className="fotos-row">
+                    {p.imagenes.map((src, idx) => (
+                      <div key={idx} className="foto-thumb" onClick={() => setImgView(src)}>
+                        <img src={src} alt={"foto"+idx} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Botón */}
+                {p.estado !== "salida" ? (
+                  <button className="btn-salida" onClick={() => marcarSalida(p)} disabled={saving === p._key}>
+                    {saving === p._key ? "⏳ Registrando..." : "📤 Marcar como SALIDA"}
+                  </button>
+                ) : (
+                  <div className="entregado-label">✅ Salida registrada a las {p.horaSalida}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Imagen ampliada */}
+      {imgView && (
+        <div className="img-overlay" onClick={() => setImgView(null)}>
+          <img src={imgView} alt="foto" />
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && <div className="toast">{toast}</div>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
